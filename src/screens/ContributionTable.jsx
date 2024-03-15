@@ -13,6 +13,8 @@ const MemberScreen = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [userNames, setUserNames] = useState({});
+  const [totalContributions, setTotalContributions] = useState(0);
+  const [totalMembers, setTotalMembers] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,6 +28,8 @@ const MemberScreen = () => {
         }));
         setData(formattedData);
         setFilteredData(formattedData);
+        calculateTotalContributions(formattedData);
+        setTotalMembers(formattedData.length);
       } catch (error) {
         console.error('Error fetching data from Firebase:', error);
       }
@@ -50,6 +54,11 @@ const MemberScreen = () => {
     fetchData();
     fetchUserNames();
   }, []);
+
+  const calculateTotalContributions = (data) => {
+    const total = data.reduce((acc, item) => acc + item.contributions, 0);
+    setTotalContributions(total);
+  };
 
   const showDatePicker = () => {
     setDatePickerVisibility(true);
@@ -83,8 +92,8 @@ const MemberScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Contribution Summary</Text>
-        <Text style={styles.subtitle}>Total Contributions KES 114,410</Text>
-        <Text style={styles.subtitle}>19 Members</Text>
+        <Text style={styles.subtitle}>Total Contributions KES {totalContributions}</Text>
+        <Text style={styles.subtitle}>Total Members {totalMembers}</Text>
       </View>
       <View style={styles.search}>
         <TextInput

@@ -29,7 +29,6 @@ const LoginScreen = () => {
 
 
 // Function to handle login
-// Function to handle login
 const handleLogin = async () => {
   setLoading(true);
 
@@ -51,10 +50,13 @@ const handleLogin = async () => {
       const userData = Object.values(snapshot.val()).find(
         (user) => user.memberId === sanitizedMemberId
       );
-
       if (userData) {
-        if (userData.password === sanitizedPassword) {
-          // Successful login
+        if (userData.memberId === 'CS9322' && sanitizedPassword === '12345') {
+          // Admin login
+          ToastAndroid.show('Admin login successful', ToastAndroid.SHORT);
+          navigation.navigate('AdminMenu');
+        } else if (userData.password === sanitizedPassword) {
+          // Regular user login
           ToastAndroid.show('Login successful', ToastAndroid.SHORT);
           login(sanitizedMemberId); // Call the login function from AuthContext
           navigation.navigate('menu');
@@ -93,7 +95,7 @@ const handleLogin = async () => {
             placeholder="Member ID"
             value={memberId}
             onChangeText={setMemberId}
-            keyboardType="phone-pad"
+            keyboardType="email-address"
             autoCapitalize="none"
           />
         </View>

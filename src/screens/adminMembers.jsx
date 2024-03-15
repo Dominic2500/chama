@@ -7,7 +7,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import * as FileSystem from 'expo-file-system';
 import DB from './config';
 
-const MembersScreen = () => {
+const AdminMemberScreen = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchText, setSearchText] = useState('');
@@ -19,7 +19,7 @@ const MembersScreen = () => {
 
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const usersData = snapshot.val() || {};
-      const usersList = Object.values(usersData);
+      const usersList = Object.values(usersData).filter(user => user.memberId !== 'CS9322'); // Filter out member with memberId CS9322
       setUsers(usersList);
       setFilteredUsers(usersList);
     });
@@ -34,13 +34,69 @@ const MembersScreen = () => {
     setFilteredUsers(filtered);
   }, [searchText, users]);
 
+  const deleteMember = async (memberId) => {
+    try {
+      const userRef = ref(DB, `users/${memberId}`);
+      await set(userRef, null); // Delete user data
+      const financeRef = ref(DB, `finance/${memberId}`);
+      await set(financeRef, null); // Delete finance data
+      Alert.alert("Success", "Member deleted successfully");
+      // Filter out the deleted member from the state
+      const updatedUsers = users.filter(user => user.memberId !== memberId);
+      setUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      Alert.alert("Error", "Failed to delete member");
+    }
+  };
 
+  const handleFileUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({});
+      if (result.type === 'success') {
+        const fileUri = result.uri;
+        const fileName = result.name;
 
+        const storage = getStorage();
+        const storageRef = ref(storage, `files/${fileName}`);
+
+        const fileToUpload = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
+
+        if (fileToUpload.length > 0) {
+          // Correct way to upload file bytes
+          const snapshot = await uploadBytes(storageRef, new Uint8Array(Buffer.from(fileToUpload, 'base64')));
+
+          // Get the download URL
+          const downloadURL = await getDownloadURL(snapshot.ref);
+
+          const currentDate = new Date();
+          const dateString = currentDate.toISOString();
+
+          // Assuming that 'meetings' is a collection in your database
+          const meetingsRef = ref(DB, 'meetings');
+          await set(push(meetingsRef), {
+            url: downloadURL,
+            date: dateString,
+          });
+
+          Alert.alert('File uploaded successfully');
+        } else {
+          Alert.alert('No file selected for upload');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error handling file upload', error.message);
+    }
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.row}>
       <Text style={styles.cell}>{item.fullName}</Text>
       <Text style={styles.cell}>{item.phoneNumber}</Text>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => deleteMember(item.memberId)}>
+        <Icon name="trash" size={20} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -56,7 +112,16 @@ const MembersScreen = () => {
           onChangeText={setSearchText}
           style={styles.searchInput}
         />
+        <TouchableOpacity style={styles.uploadButton} onPress={handleFileUpload}>
+          <Text style={styles.uploadButtonText}>Upload Minutes</Text>
+        </TouchableOpacity>
       </View>
+      {uploading && (
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>Uploading: {uploadProgress.toFixed(2)}%</Text>
+          <ActivityIndicator size="small" color="#0000ff" />
+        </View>
+      )}
       {filteredUsers.length === 0 ? (
         <Text style={styles.noRecordsText}>No members found</Text>
       ) : (
@@ -157,7 +222,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: 40,
+    backgroundColor: "#ff6347",
+    borderRadius: 5,
+    paddingVertical: 10,
+    marginTop: 10,
   },
 });
 
-export default MembersScreen;
+export default AdminMemberScreen;

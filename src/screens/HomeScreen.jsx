@@ -7,7 +7,29 @@ import { ref, set,child,get } from "firebase/database";
 import DB from "./config";
 
 
-const handleTopUp = () => {}
+const handleTopUp = () => {
+  // Dummy borrow limit for demonstration
+  const borrowLimit = 20000; // Replace with actual borrow limit retrieval logic if needed
+
+  // Calculate top-up amount (25% of borrow limit)
+  const topUpAmount = borrowLimit * 0.25;
+
+  // Display alert with top-up amount
+  Alert.alert(
+    'Top-up Request',
+    `You can top up ${topUpAmount.toLocaleString('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+    })} based on your borrow limit.`,
+    [
+      {
+        text: 'OK',
+        onPress: () => console.log('OK Pressed'),
+      },
+    ]
+  );
+};
+
 
 const HomeScreen = ({ navigation }) => {
   const [totalContributions, setTotalContributions] = useState(25000);

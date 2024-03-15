@@ -24,8 +24,6 @@ const LoanScreen = () => {
   const [userNames, setUserNames] = useState({});
 
   useEffect(() => {
-    const financeDataRef = ref(DB, 'finance');
-
     const fetchUserNames = async () => {
       try {
         const usersRef = ref(DB, 'users');
@@ -37,37 +35,38 @@ const LoanScreen = () => {
           userNamesMap[user.memberId] = user.fullName;
         }
         setUserNames(userNamesMap);
+  
+        const financeDataRef = ref(DB, 'finance');
+        const unsubscribeFinanceData = onValue(financeDataRef, async (snapshot) => {
+          const data = snapshot.val() || {};
+          const members = await Promise.all(
+            Object.entries(data).map(async ([memberId, member]) => {
+              const userName = userNamesMap[memberId] || 'Unknown';
+              return {
+                id: memberId,
+                name: userName,
+                loanBorrowed: member.loanBorrowed,
+                loanPaid: member.loanPaid,
+                remainingBalance: member.remainingLoanBalance,
+                totalRepayable: member.loanBorrowed + (member.loanBorrowed * interestRate * repaymentPeriod),
+              };
+            })
+          );
+  
+          const myLoanData = members.find((member) => member.id === loggedInMemberId) || null;
+          setMyLoan(myLoanData);
+          setMemberLoans(members.filter((member) => member.id !== loggedInMemberId));
+        });
+        
+        return () => unsubscribeFinanceData();
       } catch (error) {
-        console.error('Error fetching user names from Firebase:', error);
+        console.error('Error fetching user names and loans from Firebase:', error);
       }
     };
-
-    const unsubscribeFinanceData = onValue(financeDataRef, async (snapshot) => {
-      const data = snapshot.val() || {};
-      const members = await Promise.all(
-        Object.entries(data).map(async ([memberId, member]) => {
-          const userName = userNames[memberId] || 'Unknown';
-          return {
-            id: memberId,
-            name: userName,
-            loanBorrowed: member.loanBorrowed,
-            loanPaid: member.loanPaid,
-            remainingBalance: member.remainingLoanBalance,
-            totalRepayable: member.loanBorrowed + (member.loanBorrowed * interestRate * repaymentPeriod),
-          };
-        })
-      );
-
-      const myLoanData = members.find((member) => member.id === loggedInMemberId) || null;
-      setMyLoan(myLoanData);
-      setMemberLoans(members.filter((member) => member.id !== loggedInMemberId));
-    });
-
+  
     fetchUserNames();
-
-    return unsubscribeFinanceData;
   }, [loggedInMemberId]);
-
+  
   const calculateShareValue = () => {
     const totalLoans = memberLoans.reduce((sum, loan) => sum + loan.loanBorrowed, 0);
     const totalInterest = memberLoans.reduce((sum, loan) => sum + (loan.loanBorrowed * interestRate * repaymentPeriod), 0);

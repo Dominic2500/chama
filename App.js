@@ -5,6 +5,7 @@ import SplashScreen from './src/screens/splashscreen';
 import LoginScreen from './src/screens/login';
 import RegistrationScreen from './src/screens/registration';
 import Menu from './src/screens/menu';
+import AdminMenu from './src/screens/adminMenu';
 import ForgotMemberIDScreen from './src/screens/ForgotMemberIDScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import { AuthProvider } from './src/screens/AuthContext';
@@ -23,6 +24,7 @@ export default function App() {
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
           <Stack.Screen name="RegistrationScreen" component={RegistrationScreen} />
           <Stack.Screen name="menu" component={Menu} />
+          <Stack.Screen name="AdminMenu" component={AdminMenu} />
           <Stack.Screen name="ForgotMemberID" component={ForgotMemberIDScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </Stack.Navigator>
