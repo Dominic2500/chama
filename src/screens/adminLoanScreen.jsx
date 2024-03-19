@@ -16,7 +16,7 @@ import * as XLSX from "xlsx";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
-const LoanScreen = () => {
+const AdminLoanScreen = () => {
   const [loanAmount, setLoanAmount] = useState("");
   const [interestRate] = useState(0.05); // 5% interest rate per month
   const repaymentPeriod = 1; // Fixed repayment period to 12 months
@@ -166,7 +166,88 @@ const LoanScreen = () => {
     );
   };
 
-
+  const downloadLoanReport = async () => {
+    try {
+      console.log("Preparing data...");
+      const headers = [
+        "Name",
+        "Loan Borrowed",
+        "Loans Paid",
+        "Remaining Balance",
+        "Total Repayable",
+      ];
+      const data = [
+        headers,
+        ...memberLoans.map((loan) => [
+          loan.name,
+          loan.loanBorrowed,
+          loan.loanPaid,
+          loan.remainingBalance,
+          loan.totalRepayable,
+        ]),
+      ];
+  
+      console.log("Creating workbook...");
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Loan Report");
+  
+      console.log("Converting workbook to base64...");
+      const wbData = XLSX.write(workbook, { type: "base64", bookType: "xlsx" });
+      const fileUri = `${FileSystem.documentDirectory}LoanReport.xlsx`;
+  
+      console.log("Writing file...");
+      await FileSystem.writeAsStringAsync(fileUri, wbData, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      console.log("File written. Checking existence...");
+      const fileInfo = await FileSystem.getInfoAsync(fileUri); // Check file
+  
+      if (fileInfo.exists) {
+        console.log("File exists - Size:", fileInfo.size);
+  
+        if (Platform.OS === "ios") {
+          console.log("Sharing file on iOS...");
+          await Sharing.shareAsync(fileUri);
+        } else {
+          console.log("Requesting directory permissions...");
+          const permission =
+            await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+          if (permission.granted) {
+            console.log("Directory permission granted.");
+            const downloadDir = FileSystem.documentDirectory;
+            console.log("Copying file to download directory...");
+            await FileSystem.copyAsync({
+              from: fileUri,
+              to: `${downloadDir}DownloadedLoanReport.xlsx`,
+            });
+            Alert.alert(
+              "Download Complete",
+              "The loan report has been downloaded to your device."
+            );
+          } else {
+            console.log("Storage permission denied.");
+            Alert.alert(
+              "Permission Denied",
+              "Storage permission was denied. Unable to download the loan report."
+            );
+          }
+        }
+      } else {
+        console.log("File does not exist.");
+        Alert.alert(
+          "Error",
+          "An error occurred while downloading the loan report."
+        );
+      }
+    } catch (error) {
+      console.error("Error downloading loan report:", error);
+      Alert.alert(
+        "Error",
+        "An error occurred while downloading the loan report."
+      );
+    }
+  };
   
   
   
@@ -206,7 +287,12 @@ const LoanScreen = () => {
         <Text style={styles.infoText}>
           Share Value: {shareValue.toFixed(2)} KSh
         </Text>
-        
+        <TouchableOpacity
+          style={styles.downloadButton}
+          onPress={downloadLoanReport}
+        >
+          <Text style={styles.downloadButtonText}>Download Loan Report</Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -364,4 +450,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoanScreen;
+export default AdminLoanScreen;

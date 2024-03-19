@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { getDatabase, ref, onValue, remove, set, push } from 'firebase/database'; // Import push function
+import { getDatabase, ref, onValue, remove, set, push } from 'firebase/database';
 import * as DocumentPicker from 'expo-document-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import * as FileSystem from 'expo-file-system';
 import DB from './config';
 
@@ -19,7 +19,7 @@ const AdminMemberScreen = () => {
 
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const usersData = snapshot.val() || {};
-      const usersList = Object.values(usersData).filter(user => user.memberId !== 'CS9322'); // Filter out member with memberId CS9322
+      const usersList = Object.values(usersData).filter(user => user.memberId !== 'CS9322');
       setUsers(usersList);
       setFilteredUsers(usersList);
     });
@@ -37,11 +37,10 @@ const AdminMemberScreen = () => {
   const deleteMember = async (memberId) => {
     try {
       const userRef = ref(DB, `users/${memberId}`);
-      await set(userRef, null); // Delete user data
+      await remove(userRef); // Delete user data
       const financeRef = ref(DB, `finance/${memberId}`);
-      await set(financeRef, null); // Delete finance data
+      await remove(financeRef); // Delete finance data
       Alert.alert("Success", "Member deleted successfully");
-      // Filter out the deleted member from the state
       const updatedUsers = users.filter(user => user.memberId !== memberId);
       setUsers(updatedUsers);
       setFilteredUsers(updatedUsers);
@@ -64,23 +63,33 @@ const AdminMemberScreen = () => {
         const fileToUpload = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
 
         if (fileToUpload.length > 0) {
-          // Correct way to upload file bytes
-          const snapshot = await uploadBytes(storageRef, new Uint8Array(Buffer.from(fileToUpload, 'base64')));
+          setUploading(true);
 
-          // Get the download URL
-          const downloadURL = await getDownloadURL(snapshot.ref);
+          const uploadTask = uploadBytesResumable(storageRef, new Uint8Array(Buffer.from(fileToUpload, 'base64')));
 
-          const currentDate = new Date();
-          const dateString = currentDate.toISOString();
+          uploadTask.on('state_changed', (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+          }, (error) => {
+            console.error('Error uploading file:', error);
+            setUploading(false);
+            Alert.alert('Error', 'Failed to upload file');
+          }, async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-          // Assuming that 'meetings' is a collection in your database
-          const meetingsRef = ref(DB, 'meetings');
-          await set(push(meetingsRef), {
-            url: downloadURL,
-            date: dateString,
+            const currentDate = new Date();
+            const dateString = currentDate.toISOString();
+
+            const meetingsRef = ref(DB, 'meetings');
+            await set(push(meetingsRef), {
+              url: downloadURL,
+              date: dateString,
+            });
+
+            setUploading(false);
+            setUploadProgress(0);
+            Alert.alert('Success', 'File uploaded successfully');
           });
-
-          Alert.alert('File uploaded successfully');
         } else {
           Alert.alert('No file selected for upload');
         }
@@ -128,9 +137,10 @@ const AdminMemberScreen = () => {
         <FlatList
           data={filteredUsers}
           ListHeaderComponent={() => (
-            <View style={styles.row}>
+            <View style={styles.headerRow}>
               <Text style={[styles.cell, styles.headerCell]}>Name</Text>
               <Text style={[styles.cell, styles.headerCell]}>Phone Number</Text>
+              <Text style={[styles.cell, styles.headerCell]}></Text>
             </View>
           )}
           renderItem={renderItem}
@@ -146,15 +156,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 30,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -166,66 +176,77 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
+    borderRadius: 10,
+    fontSize: 16,
   },
   uploadButton: {
     marginLeft: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     backgroundColor: '#007bff',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   uploadButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 16,
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   progressText: {
     marginRight: 10,
+    fontSize: 16,
   },
   table: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
+    borderRadius: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   row: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
   cell: {
     flex: 1,
     textAlign: 'center',
+    fontSize: 16,
   },
   headerCell: {
     fontWeight: 'bold',
   },
   noRecordsText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 18,
     color: 'gray',
-    marginTop: 20,
+    marginTop: 30,
   },
   deleteButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 40,
+    width: 50,
     backgroundColor: "#ff6347",
-    borderRadius: 5,
-    paddingVertical: 10,
-    marginTop: 10,
+    borderRadius: 8,
+    paddingVertical: 12,
   },
 });
 

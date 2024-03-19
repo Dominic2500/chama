@@ -5,7 +5,7 @@ import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 // Import your screen components
 import HomeScreen from './HomeScreen';
 import AdminMemberScreen from './adminMembers';
-import LoanScreen from './LoansScreen';
+import AdminLoanScreen from './adminLoanScreen';
 import ProfileScreen from './ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -44,7 +44,7 @@ const AdminMenu = () => {
       />
       <Tab.Screen
         name="Loans"
-        component={LoanScreen}
+        component={AdminLoanScreen}
         options={{
           tabBarLabel: 'Loans',
           tabBarIcon: ({ color, size }) => (
