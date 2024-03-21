@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert, // Import Alert for built-in alerts
+  Alert,
 } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faEnvelope, faIdCard, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useNavigation } from "@react-navigation/native";
-import { ref, set, get } from "firebase/database"; // Import ref and get for Firebase Realtime Database
+import { ref, set, get } from "firebase/database";
 import DB from "./config";
 
 const generateMemberId = () => {
@@ -41,6 +41,27 @@ const RegistrationScreen = () => {
   };
 
   const handleRegister = async () => {
+    if (
+      fullName.trim() === "" ||
+      email.trim() === "" ||
+      phoneNumber.trim() === "" ||
+      password.trim() === "" ||
+      confirmPassword.trim() === ""
+    ) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    if (!/^[a-zA-Z ]+$/.test(fullName)) {
+      Alert.alert("Error", "Full name should only contain letters and spaces");
+      return;
+    }
+
+    if (phoneNumber.length !== 10) {
+      Alert.alert("Error", "Phone number should be 10 digits");
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
@@ -85,10 +106,10 @@ const RegistrationScreen = () => {
         const contributions = Math.floor(Math.random() * 9000) + 1000;
         const paid = Math.random() < 0.5;
         const balance = contributions - Math.floor(Math.random() * (contributions - 1500));
-        const loanBorrowed = Math.floor(Math.random() * 50000);
-        const loanPaid = Math.floor(Math.random() * loanBorrowed);
-        const remainingLoanBalance = loanBorrowed - loanPaid;
-        const totalPayable = loanBorrowed + loanBorrowed * 0.05;
+        const loanBorrowed = 0.0;
+        const loanPaid = 0.0;
+        const remainingLoanBalance = 0.0;
+        const totalPayable = 0.0;
         const welfare = 1500;
 
         const financeData = {
@@ -160,6 +181,7 @@ const RegistrationScreen = () => {
             value={phoneNumber}
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
+            maxLength={10}
           />
         </View>
         <Text style={styles.label}>Password</Text>
@@ -206,6 +228,7 @@ const RegistrationScreen = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

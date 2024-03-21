@@ -49,19 +49,19 @@ const LoanScreen = () => {
             const members = await Promise.all(
               Object.entries(data).map(async ([memberId, member]) => {
                 const userName = userNamesMap[memberId] || "Unknown";
+                const remainingBalance = member.remainingLoanBalance;
+                const interest = remainingBalance * 0.05; // 5% of the remaining balance
+                const totalRepayable = remainingBalance + interest;
                 return {
                   id: memberId,
                   name: userName,
                   loanBorrowed: member.loanBorrowed,
                   loanPaid: member.loanPaid,
-                  remainingBalance: member.remainingLoanBalance,
-                  totalRepayable:
-                    member.loanBorrowed +
-                    member.loanBorrowed * interestRate * repaymentPeriod,
+                  remainingBalance,
+                  totalRepayable,
                 };
               })
             );
-
             const myLoanData =
               members.find((member) => member.id === loggedInMemberId) || null;
             setMyLoan(myLoanData);
